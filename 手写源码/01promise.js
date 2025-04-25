@@ -69,6 +69,7 @@ class MyPromise {
         excuFnWithCatchError(onRejected, this.reason, resolve, reject);
       }
       if (this.status === PENDING_STATUS) {
+        // 5. then中的参数未传递时默认值的设置
         const defaultOnFulfilled = !onFulfilled
           ? () => {
               throw new Error("没有传递onFulfilled");
@@ -90,6 +91,19 @@ class MyPromise {
       }
     });
   }
+
+  catch(onRejected) {
+    return this.then(null, onRejected);
+  }
+
+  finally(onFinally) {
+    if (this.status === FULFILLED_STATUS) {
+      onFinally();
+    }
+    if (this.status === REJECTED_STATUS) {
+      onFinally();
+    }
+  }
 }
 
 const p1 = new MyPromise((resolve, reject) => {
@@ -98,22 +112,28 @@ const p1 = new MyPromise((resolve, reject) => {
   resolve("resolve");
 });
 
-p1.then(
-  (res) => {
-    console.log("res1", res);
-    throw new Error("error2222");
-  },
-  (err) => {
+p1.then((res) => {
+  console.log("res1", res);
+  throw new Error("error1111");
+})
+  .catch((err) => {
     console.log("err", err);
-  }
-).then(
-  (res) => {
-    console.log("res2", res);
-  },
-  (err) => {
-    console.log("err2", err.message);
-  }
-);
+  })
+  .finally(() => {
+    console.log("finally");
+  });
+
+//   (err) => {
+//     console.log("err", err);
+//   }
+// ).then(
+//   (res) => {
+//     console.log("res2", res);
+//   },
+//   (err) => {
+//     console.log("err2", err.message);
+//   }
+// );
 
 // p1.then(
 //   (res) => {
