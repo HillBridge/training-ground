@@ -48,36 +48,97 @@ class MyPromise {
   }
 
   then(onFulfilled, onRejected) {
-    const defaultOnFulfilled = !onFulfilled
-      ? () => {
-          throw new Error("没有传递onFulfilled");
+    // 如果调用then的时候状态已经确定下来了, 比如then放在setTimeout中, 此时状态已经确定下来了, 那么就直接调用then中的回调函数
+    return new MyPromise((resolve, reject) => {
+      if (this.status === FULFILLED_STATUS) {
+        try {
+          const result = onFulfilled(this.value);
+          resolve(result);
+        } catch (error) {
+          reject(error);
         }
-      : onFulfilled;
-    const defaultOnRejected = !onRejected
-      ? () => {
-          throw new Error("没有传递onRejected");
+      }
+      if (this.status === REJECTED_STATUS) {
+        try {
+          const result = onRejected(this.reason);
+          resolve(result);
+        } catch (error) {
+          reject(error);
         }
-      : onRejected;
+      }
+      if (this.status === PENDING_STATUS) {
+        const defaultOnFulfilled = !onFulfilled
+          ? () => {
+              throw new Error("没有传递onFulfilled");
+            }
+          : onFulfilled;
+        const defaultOnRejected = !onRejected
+          ? () => {
+              throw new Error("没有传递onRejected");
+            }
+          : onRejected;
 
-    this.onFulfilledCallbacks.push(defaultOnFulfilled);
-    this.onRejectedCallbacks.push(defaultOnRejected);
+        // pending状态then的链式调用, 需要往数组中添加一个函数的方式, 这样可以在函数中拿到执行结果并进行处理
+        this.onFulfilledCallbacks.push(() => {
+          try {
+            const result = defaultOnFulfilled(this.value);
+            resolve(result);
+          } catch (error) {
+            reject(error);
+          }
+        });
+        this.onRejectedCallbacks.push(() => {
+          try {
+            const result = defaultOnRejected(this.reason);
+            resolve(result);
+          } catch (error) {
+            reject(error);
+          }
+        });
+      }
+    });
   }
 }
 
 const p1 = new MyPromise((resolve, reject) => {
   // 同步执行 但是此时then方法还没有执行 无法拿到回调函数 需要异步执行 queueMicrotask()
+  // reject("reject");
   resolve("resolve");
 });
 
 p1.then(
   (res) => {
     console.log("res1", res);
+    throw new Error("error2222");
   },
   (err) => {
     console.log("err", err);
   }
+).then(
+  (res) => {
+    console.log("res2", res);
+  },
+  (err) => {
+    console.log("err2", err.message);
+  }
 );
 
-p1.then((res) => {
-  console.log("res2", res);
-});
+// p1.then(
+//   (res) => {
+//     console.log("res2", res);
+//   },
+//   (err) => {
+//     console.log("err2", err);
+//   }
+// );
+
+// setTimeout(() => {
+//   p1.then(
+//     (res) => {
+//       console.log("res3", res);
+//     },
+//     (err) => {
+//       console.log("err3", err);
+//     }
+//   );
+// }, 1000);
