@@ -70,58 +70,105 @@ class MyPromise {
       }
       if (this.status === PENDING_STATUS) {
         // 5. then中的参数未传递时默认值的设置
-        const defaultOnFulfilled = !onFulfilled
-          ? () => {
-              throw new Error("没有传递onFulfilled");
-            }
-          : onFulfilled;
-        const defaultOnRejected = !onRejected
-          ? () => {
-              throw new Error("没有传递onRejected");
-            }
-          : onRejected;
+        onFulfilled =
+          onFulfilled ||
+          (() => {
+            throw new Error("没有传递onFulfilled");
+          });
+
+        // reject的默认值要考虑catch存在的时候, 应该将第一个Promise中的err抛出, 这样在第二个Promise就会在catch中触发
+        onRejected =
+          onRejected ||
+          ((err) => {
+            throw err;
+          });
 
         // 3.pending状态then的链式调用, 需要往数组中添加一个函数的方式, 这样可以在函数中拿到执行结果并进行处理
         this.onFulfilledCallbacks.push(() => {
-          excuFnWithCatchError(defaultOnFulfilled, this.value, resolve, reject);
+          excuFnWithCatchError(onFulfilled, this.value, resolve, reject);
         });
         this.onRejectedCallbacks.push(() => {
-          excuFnWithCatchError(defaultOnRejected, this.reason, resolve, reject);
+          excuFnWithCatchError(onRejected, this.reason, resolve, reject);
         });
       }
     });
   }
 
+  // catch方法实现 调用then Resolve传空, catch中的cb作为reject的回调
   catch(onRejected) {
     return this.then(null, onRejected);
   }
 
+  // finally方法实现 调用then 无论成功还是失败都会执行finally
   finally(onFinally) {
-    if (this.status === FULFILLED_STATUS) {
-      onFinally();
-    }
-    if (this.status === REJECTED_STATUS) {
-      onFinally();
-    }
+    this.then(
+      () => {
+        onFinally();
+      },
+      () => {
+        onFinally();
+      }
+    );
+  }
+
+  static all(promises) {
+    const result = [];
+    return new MyPromise((resolve, reject) => {
+      promises.forEach((promise) => {
+        promise
+          .then((res) => {
+            result.push(res);
+            if (result.length === promises.length) {
+              resolve(result);
+            }
+          })
+          .catch((err) => {
+            reject(err);
+          });
+      });
+    });
   }
 }
 
 const p1 = new MyPromise((resolve, reject) => {
   // 同步执行 但是此时then方法还没有执行 无法拿到回调函数 需要异步执行 queueMicrotask()
   // reject("reject");
-  resolve("resolve");
+  resolve("111");
 });
 
-p1.then((res) => {
-  console.log("res1", res);
-  throw new Error("error1111");
-})
+const p2 = new MyPromise((resolve, reject) => {
+  setTimeout(() => {
+    reject("222");
+  }, 1000);
+});
+
+const p3 = new MyPromise((resolve, reject) => {
+  setTimeout(() => {
+    resolve("333");
+  }, 2000);
+});
+
+MyPromise.all([p1, p2, p3])
+  .then((res) => {
+    console.log("res", res);
+  })
   .catch((err) => {
     console.log("err", err);
   })
   .finally(() => {
     console.log("finally");
   });
+
+// p1.then((res) => {
+//   console.log("res1", res);
+//   throw new Error("error1111");
+// })
+//   .catch((err) => {
+//     console.log("err", err);
+//   })
+//   .finally(() => {
+//     console.log("finally");
+//   });
 
 //   (err) => {
 //     console.log("err", err);
