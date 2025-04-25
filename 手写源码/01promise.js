@@ -5,6 +5,15 @@ const PENDING_STATUS = "pending";
 const FULFILLED_STATUS = "fulfilled";
 const REJECTED_STATUS = "rejected";
 
+// 抽离封装公共的代码
+function excuFnWithCatchError(fn, value, resolve, reject) {
+  try {
+    const result = fn(value);
+    resolve(result);
+  } catch (error) {
+    reject(error);
+  }
+}
 class MyPromise {
   constructor(executor) {
     // Promise构造函数接收一个函数, 这个函数内部有两个参数, resolve和reject
@@ -48,23 +57,16 @@ class MyPromise {
   }
 
   then(onFulfilled, onRejected) {
-    // 如果调用then的时候状态已经确定下来了, 比如then放在setTimeout中, 此时状态已经确定下来了, 那么就直接调用then中的回调函数
+    // 1.then的链式调用问题 必须返回一个新的promise
     return new MyPromise((resolve, reject) => {
+      // 2.如果调用then的时候状态已经确定下来了, 比如then放在setTimeout中, 此时状态已经确定下来了, 那么就直接调用then中的回调函数
       if (this.status === FULFILLED_STATUS) {
-        try {
-          const result = onFulfilled(this.value);
-          resolve(result);
-        } catch (error) {
-          reject(error);
-        }
+        // 4.try catch捕获错误
+        excuFnWithCatchError(onFulfilled, this.value, resolve, reject);
       }
       if (this.status === REJECTED_STATUS) {
-        try {
-          const result = onRejected(this.reason);
-          resolve(result);
-        } catch (error) {
-          reject(error);
-        }
+        // 4.try catch捕获错误
+        excuFnWithCatchError(onRejected, this.reason, resolve, reject);
       }
       if (this.status === PENDING_STATUS) {
         const defaultOnFulfilled = !onFulfilled
@@ -78,22 +80,12 @@ class MyPromise {
             }
           : onRejected;
 
-        // pending状态then的链式调用, 需要往数组中添加一个函数的方式, 这样可以在函数中拿到执行结果并进行处理
+        // 3.pending状态then的链式调用, 需要往数组中添加一个函数的方式, 这样可以在函数中拿到执行结果并进行处理
         this.onFulfilledCallbacks.push(() => {
-          try {
-            const result = defaultOnFulfilled(this.value);
-            resolve(result);
-          } catch (error) {
-            reject(error);
-          }
+          excuFnWithCatchError(defaultOnFulfilled, this.value, resolve, reject);
         });
         this.onRejectedCallbacks.push(() => {
-          try {
-            const result = defaultOnRejected(this.reason);
-            resolve(result);
-          } catch (error) {
-            reject(error);
-          }
+          excuFnWithCatchError(defaultOnRejected, this.reason, resolve, reject);
         });
       }
     });
