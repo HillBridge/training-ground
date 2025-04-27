@@ -128,6 +128,28 @@ class MyPromise {
       });
     });
   }
+
+  static allSettled(promises) {
+    const result = [];
+    return new MyPromise((resolve, reject) => {
+      promises.forEach((promise) => {
+        promise.then(
+          (res) => {
+            result.push({ status: "fulfilled", value: res });
+            if (result.length === promises.length) {
+              resolve(result);
+            }
+          },
+          (err) => {
+            result.push({ status: "rejected", value: err });
+            if (result.length === promises.length) {
+              resolve(result);
+            }
+          }
+        );
+      });
+    });
+  }
 }
 
 const p1 = new MyPromise((resolve, reject) => {
@@ -148,7 +170,7 @@ const p3 = new MyPromise((resolve, reject) => {
   }, 2000);
 });
 
-MyPromise.all([p1, p2, p3])
+MyPromise.allSettled([p1, p2, p3])
   .then((res) => {
     console.log("res", res);
   })
