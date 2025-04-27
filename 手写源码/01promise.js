@@ -150,12 +150,48 @@ class MyPromise {
       });
     });
   }
+
+  static race(promises) {
+    return new MyPromise((resolve, reject) => {
+      promises.forEach((promise) => {
+        promise.then(
+          (res) => {
+            resolve(res);
+          },
+          (err) => {
+            reject(err);
+          }
+        );
+      });
+    });
+  }
+
+  static any(promises) {
+    const reasons = [];
+    return new MyPromise((resolve, reject) => {
+      promises.forEach((promise) => {
+        promise.then(
+          (res) => {
+            resolve(res);
+          },
+          (err) => {
+            reasons.push(err);
+            if (reasons.length === promises.length) {
+              reject(new AggregateError(reasons));
+            }
+          }
+        );
+      });
+    });
+  }
 }
 
 const p1 = new MyPromise((resolve, reject) => {
   // 同步执行 但是此时then方法还没有执行 无法拿到回调函数 需要异步执行 queueMicrotask()
   // reject("reject");
-  resolve("111");
+  setTimeout(() => {
+    reject("111");
+  }, 500);
 });
 
 const p2 = new MyPromise((resolve, reject) => {
@@ -166,16 +202,16 @@ const p2 = new MyPromise((resolve, reject) => {
 
 const p3 = new MyPromise((resolve, reject) => {
   setTimeout(() => {
-    resolve("333");
+    reject("333");
   }, 2000);
 });
 
-MyPromise.allSettled([p1, p2, p3])
+MyPromise.any([p1, p2, p3])
   .then((res) => {
     console.log("res", res);
   })
   .catch((err) => {
-    console.log("err", err);
+    console.log("err", err.errors);
   })
   .finally(() => {
     console.log("finally");
