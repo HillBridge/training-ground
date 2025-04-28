@@ -27,7 +27,7 @@ function unique3(arr) {
   return result;
 }
 
-// 数组去重 但是不创建新数组
+// 数组去重 但是不创建新数组(类似于filter方法)
 
 function unique4(arr) {
   for (let i = 0; i < arr.length; i++) {
