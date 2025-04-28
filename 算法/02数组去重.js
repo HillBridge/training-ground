@@ -26,3 +26,17 @@ function unique3(arr) {
   });
   return result;
 }
+
+// 数组去重 但是不创建新数组
+
+function unique4(arr) {
+  for (let i = 0; i < arr.length; i++) {
+    if (arr.indexOf(arr[i]) !== i) {
+      // 删除这个元素
+      arr.splice(i, 1);
+      // 因为删除一个元素后, 数组长度会减小, 所以需要减小索引
+      i--;
+    }
+  }
+  return arr;
+}
