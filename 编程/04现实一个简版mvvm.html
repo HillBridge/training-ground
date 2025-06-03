@@ -41,6 +41,8 @@
 
         compile(node) {
            node.childNodes.forEach(child => {
+            console.log('child', child, child.nodeType)
+            // <span>姓名: {{ name }}</span> 条件为这个才进行编译
             if(child.nodeType === 3 && /\{\{(.*)\}\}/.test(child.textContent)){
                 const key = RegExp.$1
                 // 将node通过在class属性上传递的方式进行传递
