@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <div id="app">
+        <p>姓名 <span>{{ name }}</span></p>   
+        <p>年龄 <span>{{ age }}</span></p>   
+    </div>
+</body>
+<script>
+    class Vue {
+        constructor(options) {
+            this.options = options
+            this.$data = options.data
+            this.observe(this.$data)
+            this.compile(document.querySelector(options.el))
+        }
+
+        observe(data) {
+            Object.keys(data).forEach(key => {
+                let value = data[key]
+                const dep = new Dep()
+                Object.defineProperty(data, key, {
+                    get() {
+                        // 依赖收集
+                        Dep.target && dep.addSub(Dep.target)
+                        return value
+                    },
+                    set(newVal) {
+                        // 依赖更新
+                        value = newVal
+                        dep.notify(newVal)
+                    }
+                })
+            })
+        }
+
+        compile(node) {
+           node.childNodes.forEach(child => {
+            if(child.nodeType === 3 && /\{\{(.*)\}\}/.test(child.textContent)){
+                const key = RegExp.$1
+                // 将node通过在class属性上传递的方式进行传递
+                // 也可以声明一个全局变量进行值的传递
+                Dep.target = child
+                // 初始化渲染dom
+                child.textContent = child.textContent.replace(`{{${key}}}`,this.$data[key.trim()])
+                Dep.target = null
+            }
+            if(child.childNodes.length) {
+                this.compile(child)
+            }
+           })
+        }
+    }
+
+    class Dep {
+        // 观察者模式
+        constructor() {
+            this.subs = []
+        }
+
+        addSub(node) {
+            // 收集依赖
+            this.subs.push(node)
+        }
+
+        notify(value) {
+            // 依赖更新
+            this.subs.forEach(node => {
+                node.textContent = value;
+            });
+        }
+    }
+    
+    const vm = new Vue({
+        el: '#app',
+        data: {
+            name: '计算中',
+            age: '计算中'
+        }
+    })
+
+    setTimeout(() => {
+        vm.$data.name = '张三'
+        vm.$data.age = '20'
+    }, 1000)
+    
+</script>
+</html>
